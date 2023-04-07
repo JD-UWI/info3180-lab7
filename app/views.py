@@ -4,21 +4,45 @@ Jinja2 Documentation:    https://jinja.palletsprojects.com/
 Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
-
-from app import app
-from flask import render_template, request, jsonify, send_file
 import os
-
+from app import app, db
+from flask import render_template, request, jsonify, send_file, redirect, url_for, flash, session, abort, send_from_directory
+from werkzeug.utils import secure_filename
+from app.models import Movies
+from app.forms import MovieForm
 
 ###
 # Routing for your application.
 ###
+rootdir = os.getcwd()
 
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
 
+@app.route('/api/v1/movies', methods=['GET','POST'])
+def movies():
+    form = MovieForm()
+    if request.method == 'POST':
+        if not form.validate_on_submit():
+            flash(form_errors(form))
+            return redirect((url_for('index')))
+        else:
+            title = form.title.data
+            description = form.description.data
+            poster = form.photo.data
+            poster_name= secure_filename(poster.filename)
+            poster.save(os.path.join(app.config['UPLOAD'], poster_name))
 
+            movie_info = Movies(title, description, poster, created_at)
+            db.session.add(movie_info)
+            db.session.commit()
+            return redirect(url_for('index')) # Update this to redirect the user to a route that displays all uploaded image files
+
+    return jsonify(message="Movie successfully added",
+                   title=f"{title}",
+                   poster=f"{poster}",
+                   description=f"{description}")
 ###
 # The functions below should be applicable to all Flask apps.
 ###
